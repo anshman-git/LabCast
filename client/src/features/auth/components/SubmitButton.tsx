@@ -1,0 +1,2 @@
+import type { ButtonHTMLAttributes } from 'react'
+export function SubmitButton({ isLoading, children, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { isLoading: boolean }) { return <button {...props} disabled={isLoading || props.disabled} className="mt-6 w-full rounded-xl bg-sky-aqua px-4 py-3 text-sm font-bold text-ink transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60">{isLoading ? 'Please wait…' : children}</button> }

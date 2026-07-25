@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.42.2",
+    "react-hot-toast": "^2.6.0",
+    "react-router-dom": "^7.18.1",
+    "tailwind-merge": "^3.6.0"
+  }
+}

@@ -1,0 +1,1 @@
+export function AuthError({ message }: { message?: string }) { return message ? <p className="mt-5 rounded-xl border border-red-300/30 bg-red-300/10 px-3 py-2 text-sm text-red-100" role="alert">{message}</p> : null }
