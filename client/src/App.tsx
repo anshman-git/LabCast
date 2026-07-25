@@ -14,11 +14,13 @@ import {
   Sparkles,
   Users,
 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { BrandMark } from './components/BrandMark'
 import { FeatureCard } from './components/FeatureCard'
 import { PersonaPanel } from './components/PersonaPanel'
 import { ProductPreview } from './components/ProductPreview'
 import { TimelineStep } from './components/TimelineStep'
+import { useAuth } from './features/auth/auth.context'
 import './App.css'
 
 const navItems = [
@@ -36,7 +38,10 @@ const timelineSteps = [
 
 function App() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const { user } = useAuth()
   const closeMenu = () => setMenuOpen(false)
+  const getStartedPath = user ? '/role-selection' : '/register'
+  const joinClassroomPath = user ? '/rooms/join' : '/login'
 
   return (
     <div className="page-shell">
@@ -48,8 +53,8 @@ function App() {
             {navItems.map((item) => <a key={item.href} className="text-sm text-mist transition-colors hover:text-cloud" href={item.href}>{item.label}</a>)}
           </nav>
           <div className="hidden items-center gap-3 md:flex">
-            <a className="px-3 py-2 text-sm font-medium text-mist transition-colors hover:text-cloud" href="#cta">Sign in</a>
-            <a className="secondary-cta rounded-full px-4 py-2.5 text-sm font-semibold" href="#cta">Get started <ArrowRight className="ml-1 inline-block" size={15} /></a>
+            <Link className="px-3 py-2 text-sm font-medium text-mist transition-colors hover:text-cloud" to="/login">Sign in</Link>
+            <Link className="secondary-cta rounded-full px-4 py-2.5 text-sm font-semibold" to={getStartedPath}>Get started <ArrowRight className="ml-1 inline-block" size={15} /></Link>
           </div>
           <button className="grid size-10 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-mist md:hidden" type="button" aria-expanded={menuOpen} aria-controls="mobile-navigation" aria-label={menuOpen ? 'Close menu' : 'Open menu'} onClick={() => setMenuOpen((open) => !open)}>
             {menuOpen ? <ChevronDown className="rotate-180" size={18} /> : <span className="flex flex-col gap-1"><span className="h-px w-4 bg-current" /><span className="h-px w-4 bg-current" /></span>}
@@ -58,7 +63,7 @@ function App() {
         {menuOpen && <nav id="mobile-navigation" className="border-t border-white/10 px-5 py-4 md:hidden" aria-label="Mobile navigation">
           <div className="mx-auto grid max-w-7xl gap-1">
             {navItems.map((item) => <a key={item.href} className="rounded-xl px-3 py-3 text-sm text-mist hover:bg-white/[0.05] hover:text-cloud" href={item.href} onClick={closeMenu}>{item.label}</a>)}
-            <a className="mt-2 rounded-xl bg-sky-aqua px-3 py-3 text-center text-sm font-semibold text-ink" href="#cta" onClick={closeMenu}>Get started</a>
+            <Link className="mt-2 rounded-xl bg-sky-aqua px-3 py-3 text-center text-sm font-semibold text-ink" to={getStartedPath} onClick={closeMenu}>Get started</Link>
           </div>
         </nav>}
       </header>
@@ -72,8 +77,8 @@ function App() {
               <h1 className="hero-title mt-7">Make every <em>screen</em> part of the lesson.</h1>
               <p className="hero-description mt-7">LabCast gives college classrooms a shared point of view—so teachers can guide the room and students can stay in the flow.</p>
               <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-                <a className="primary-cta inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-bold" href="#cta">Start Teaching <ArrowUpRight size={17} /></a>
-                <a className="secondary-cta inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-semibold" href="#cta">Join Classroom <ArrowRight size={17} /></a>
+                <Link className="primary-cta inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-bold" to={getStartedPath}>Start Teaching <ArrowUpRight size={17} /></Link>
+                <Link className="secondary-cta inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-semibold" to={joinClassroomPath}>Join Classroom <ArrowRight size={17} /></Link>
               </div>
               <div className="mt-10 flex flex-wrap items-center gap-x-5 gap-y-3 text-xs text-mist/70">
                 <span className="flex items-center gap-2"><span className="grid size-5 place-items-center rounded-full bg-emerald-300/15 text-emerald-200"><Check size={12} /></span> No downloads</span>
@@ -148,7 +153,7 @@ function App() {
         <section id="cta" className="mx-auto max-w-7xl scroll-mt-24 px-5 pb-24 sm:px-8 sm:pb-32 lg:px-10">
           <div className="relative overflow-hidden rounded-[2rem] border border-sky-aqua/30 bg-gradient-to-br from-sky-aqua via-[#3bb9ed] to-indigo-ink p-7 shadow-aqua sm:p-12 lg:p-16">
             <div className="absolute -right-16 -top-20 size-72 rounded-full border border-white/25 opacity-70" aria-hidden="true" /><div className="absolute -bottom-28 right-24 size-64 rounded-full border border-white/15 opacity-60" aria-hidden="true" />
-            <div className="relative z-10 grid gap-10 lg:grid-cols-[1fr_auto] lg:items-end"><div><p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-ink/60">Your next lab starts here</p><h2 className="mt-4 max-w-3xl font-display text-4xl font-medium tracking-[-0.065em] text-ink sm:text-6xl">Make space for every voice in the room.</h2><p className="mt-5 max-w-xl text-base leading-7 text-ink/70">Bring the whole class into focus with one calm, connected workspace.</p></div><a className="inline-flex items-center justify-center gap-2 rounded-full bg-ink px-6 py-3.5 text-sm font-bold text-cloud transition-transform hover:-translate-y-1" href="#home">Start a LabCast <Play size={15} fill="currentColor" /></a></div>
+            <div className="relative z-10 grid gap-10 lg:grid-cols-[1fr_auto] lg:items-end"><div><p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-ink/60">Your next lab starts here</p><h2 className="mt-4 max-w-3xl font-display text-4xl font-medium tracking-[-0.065em] text-ink sm:text-6xl">Make space for every voice in the room.</h2><p className="mt-5 max-w-xl text-base leading-7 text-ink/70">Bring the whole class into focus with one calm, connected workspace.</p></div><Link className="inline-flex items-center justify-center gap-2 rounded-full bg-ink px-6 py-3.5 text-sm font-bold text-cloud transition-transform hover:-translate-y-1" to={getStartedPath}>Start a LabCast <Play size={15} fill="currentColor" /></Link></div>
           </div>
         </section>
       </main>
