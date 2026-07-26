@@ -1,7 +1,7 @@
 import type { Timestamp } from 'firebase/firestore'
 
 export const ROOM_CODE_LENGTH = 6
-export type RoomStatus = 'waiting'
+export type RoomStatus = 'waiting' | 'active' | 'ended'
 export type MemberRole = 'teacher' | 'student'
 
 export type Room = {

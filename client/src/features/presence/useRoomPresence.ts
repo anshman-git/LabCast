@@ -42,7 +42,7 @@ export function useRoomPresence(roomCode: string | null, role: PresenceRole) {
     }
     void connect()
     return () => { disposed = true; socket?.emit('presence:leave'); socket?.disconnect() }
-  }, [role, roomCode, user?.displayName, user?.email, user?.uid])
+  }, [role, roomCode, user])
 
   return state
 }
