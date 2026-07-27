@@ -1,28 +1,42 @@
 import { useState, type FormEvent } from 'react'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, AlertCircle, Loader2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { BrandMark } from '../../../components/BrandMark'
+import { roomService } from '../room.service'
 
 export function JoinRoomPage() {
   const navigate = useNavigate()
   const [studentName, setStudentName] = useState('')
   const [roomCode, setRoomCode] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [isVerifying, setIsVerifying] = useState(false)
 
-  const handleJoin = (e: FormEvent) => {
+  const handleJoin = async (e: FormEvent) => {
     e.preventDefault()
+    setError(null)
     const trimmedName = studentName.trim()
     const trimmedCode = roomCode.trim().toUpperCase()
 
     if (!trimmedName || !trimmedCode) return
 
-    // Store student guest credentials in sessionStorage (ideal for shared lab computers)
-    sessionStorage.setItem('labcast_student_name', trimmedName)
-    sessionStorage.setItem(
-      'labcast_guest_id',
-      `guest_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
-    )
+    setIsVerifying(true)
+    try {
+      // Validate room existence via roomService lookup
+      await roomService.getRoomByCode(trimmedCode)
 
-    navigate(`/room/${trimmedCode}`)
+      // Store student guest credentials in sessionStorage
+      sessionStorage.setItem('labcast_student_name', trimmedName)
+      sessionStorage.setItem(
+        'labcast_guest_id',
+        `guest_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
+      )
+
+      navigate(`/room/${trimmedCode}`)
+    } catch (err) {
+      setError('Room not found. Please check the room code and try again.')
+    } finally {
+      setIsVerifying(false)
+    }
   }
 
   return (
@@ -40,6 +54,14 @@ export function JoinRoomPage() {
           </p>
         </div>
 
+        {/* Validation Error Banner */}
+        {error && (
+          <div className="mb-4 flex items-center gap-2 rounded-[8px] border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
+            <AlertCircle size={15} className="shrink-0 text-rose-400" />
+            <span>{error}</span>
+          </div>
+        )}
+
         {/* Join Form */}
         <form onSubmit={handleJoin} className="space-y-4">
           <div>
@@ -50,7 +72,10 @@ export function JoinRoomPage() {
               type="text"
               required
               value={studentName}
-              onChange={(e) => setStudentName(e.target.value)}
+              onChange={(e) => {
+                setStudentName(e.target.value)
+                if (error) setError(null)
+              }}
               placeholder="e.g. Alex Chen"
               className="w-full h-9 rounded-[8px] border border-zinc-800 bg-zinc-950 px-3 text-xs text-zinc-100 placeholder-zinc-500 focus:border-blue-500 focus:outline-none transition-colors"
             />
@@ -66,18 +91,30 @@ export function JoinRoomPage() {
               minLength={4}
               maxLength={8}
               value={roomCode}
-              onChange={(e) => setRoomCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-              placeholder="LAB401"
+              onChange={(e) => {
+                setRoomCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))
+                if (error) setError(null)
+              }}
+              placeholder="e.g. LAB731"
               className="w-full h-9 rounded-[8px] border border-zinc-800 bg-zinc-950 px-3 font-mono tracking-widest text-xs text-zinc-100 uppercase placeholder-zinc-600 focus:border-blue-500 focus:outline-none transition-colors"
             />
           </div>
 
           <button
             type="submit"
-            disabled={!studentName.trim() || roomCode.trim().length < 4}
+            disabled={isVerifying || !studentName.trim() || roomCode.trim().length < 4}
             className="w-full h-9 rounded-[8px] bg-zinc-100 text-zinc-950 font-medium text-xs hover:bg-white active:bg-zinc-200 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed mt-2"
           >
-            Join Classroom <ArrowRight size={14} />
+            {isVerifying ? (
+              <>
+                <Loader2 size={14} className="animate-spin text-zinc-950" />
+                Verifying Room...
+              </>
+            ) : (
+              <>
+                Join Classroom <ArrowRight size={14} />
+              </>
+            )}
           </button>
         </form>
 

@@ -81,8 +81,8 @@ export const attendanceService = {
 
   async getUserAttendanceStats(userId: string): Promise<{ totalJoined: number; attendancePercentage: number }> {
     const local = getLocalAttendance().filter(r => r.userId === userId)
-    const totalJoined = Math.max(local.length, 12) // Demo baseline
-    const attendancePercentage = 94.5 // Premium startup demo stat
+    const totalJoined = local.length
+    const attendancePercentage = totalJoined > 0 ? 100 : 0
 
     return {
       totalJoined,

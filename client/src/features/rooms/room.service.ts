@@ -10,10 +10,23 @@ import { RoomCodeGenerationError, RoomNotFoundError } from './room.errors'
 
 const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const MAX_CODE_ATTEMPTS = 5
+const LOCAL_ROOMS_KEY = 'labcast_created_rooms'
 
-function database() {
-  if (!firestoreDb || !isFirebaseConfigured) throw new Error('Firestore is not configured. Set the VITE_FIREBASE_* environment variables.')
-  return firestoreDb
+function getLocalRooms(): Record<string, Room> {
+  try {
+    const raw = localStorage.getItem(LOCAL_ROOMS_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+function saveLocalRoom(room: Room) {
+  try {
+    const rooms = getLocalRooms()
+    rooms[room.roomCode] = room
+    localStorage.setItem(LOCAL_ROOMS_KEY, JSON.stringify(rooms))
+  } catch {}
 }
 
 function createRoomCode() {
@@ -27,46 +40,72 @@ function toRoom(snapshot: DocumentSnapshot): Room {
 
 export const roomService = {
   async createRoom(input: CreateRoomInput, teacherId: string): Promise<Room> {
-    const db = database()
     const title = input.title.trim()
     const subject = input.subject.trim()
     if (!title || !subject) throw new Error('Room title and subject are required.')
 
-    for (let attempt = 0; attempt < MAX_CODE_ATTEMPTS; attempt += 1) {
-      const roomCode = createRoomCode()
-      const roomRef = doc(db, 'rooms', roomCode)
-      const memberRef = doc(db, 'members', `${roomCode}_${teacherId}`)
-      const wasCreated = await runTransaction(db, async (transaction) => {
-        const existing = await transaction.get(roomRef)
-        if (existing.exists()) return false
-        const room = { id: roomRef.id, roomCode, teacherId, title, subject, status: 'waiting' as const, createdAt: serverTimestamp() }
-        transaction.set(roomRef, room)
-        transaction.set(memberRef, { roomId: roomRef.id, userId: teacherId, role: 'teacher', joinedAt: serverTimestamp() })
-        return true
-      })
-      if (wasCreated) return { id: roomRef.id, roomCode, teacherId, title, subject, status: 'waiting', createdAt: null }
+    if (firestoreDb && isFirebaseConfigured) {
+      for (let attempt = 0; attempt < MAX_CODE_ATTEMPTS; attempt += 1) {
+        const roomCode = createRoomCode()
+        const roomRef = doc(firestoreDb, 'rooms', roomCode)
+        const memberRef = doc(firestoreDb, 'members', `${roomCode}_${teacherId}`)
+        const wasCreated = await runTransaction(firestoreDb, async (transaction) => {
+          const existing = await transaction.get(roomRef)
+          if (existing.exists()) return false
+          const room = { id: roomRef.id, roomCode, teacherId, title, subject, status: 'waiting' as const, createdAt: serverTimestamp() }
+          transaction.set(roomRef, room)
+          transaction.set(memberRef, { roomId: roomRef.id, userId: teacherId, role: 'teacher', joinedAt: serverTimestamp() })
+          return true
+        })
+        if (wasCreated) {
+          const createdRoom: Room = { id: roomRef.id, roomCode, teacherId, title, subject, status: 'waiting', createdAt: null }
+          saveLocalRoom(createdRoom)
+          return createdRoom
+        }
+      }
+      throw new RoomCodeGenerationError()
     }
-    throw new RoomCodeGenerationError()
+
+    // Local runtime creation fallback
+    const roomCode = createRoomCode()
+    const localRoom: Room = {
+      id: `room_${roomCode}`,
+      roomCode,
+      teacherId,
+      title,
+      subject,
+      status: 'active',
+      createdAt: null,
+    }
+    saveLocalRoom(localRoom)
+    return localRoom
   },
 
   async joinRoom(roomCodeInput: string, userId: string): Promise<JoinRoomResult> {
-    const db = database()
     const roomCode = roomCodeInput.trim().toUpperCase()
-    if (!new RegExp(`^[A-Z2-9]{${ROOM_CODE_LENGTH}}$`).test(roomCode)) throw new RoomNotFoundError()
-    const roomRef = doc(db, 'rooms', roomCode)
-    const memberRef = doc(db, 'members', `${roomCode}_${userId}`)
-    return runTransaction(db, async (transaction) => {
-      const roomSnapshot = await transaction.get(roomRef)
-      if (!roomSnapshot.exists()) throw new RoomNotFoundError()
-      const memberSnapshot = await transaction.get(memberRef)
-      if (memberSnapshot.exists()) return { room: toRoom(roomSnapshot), alreadyJoined: true }
-      transaction.set(memberRef, { roomId: roomRef.id, userId, role: 'student', joinedAt: serverTimestamp() })
-      return { room: toRoom(roomSnapshot), alreadyJoined: false }
-    })
+
+    if (firestoreDb && isFirebaseConfigured) {
+      const roomRef = doc(firestoreDb, 'rooms', roomCode)
+      const memberRef = doc(firestoreDb, 'members', `${roomCode}_${userId}`)
+      return runTransaction(firestoreDb, async (transaction) => {
+        const roomSnapshot = await transaction.get(roomRef)
+        if (!roomSnapshot.exists()) throw new RoomNotFoundError()
+        const memberSnapshot = await transaction.get(memberRef)
+        if (memberSnapshot.exists()) return { room: toRoom(roomSnapshot), alreadyJoined: true }
+        transaction.set(memberRef, { roomId: roomRef.id, userId, role: 'student', joinedAt: serverTimestamp() })
+        return { room: toRoom(roomSnapshot), alreadyJoined: false }
+      })
+    }
+
+    // Check local room store
+    const localRoom = getLocalRooms()[roomCode]
+    if (!localRoom) throw new RoomNotFoundError()
+    return { room: localRoom, alreadyJoined: false }
   },
 
   async getRoomByCode(roomCodeInput: string): Promise<Room> {
     const roomCode = roomCodeInput.trim().toUpperCase()
+
     if (firestoreDb && isFirebaseConfigured) {
       try {
         const { getDoc } = await import('firebase/firestore')
@@ -80,16 +119,14 @@ export const roomService = {
       }
     }
 
-    // Demo fallback room for testing & showcase
-    return {
-      id: roomCode,
-      roomCode,
-      teacherId: 'teacher-demo-id',
-      title: 'CS 401: Advanced Systems Programming',
-      subject: 'Computer Science',
-      status: 'active',
-      createdAt: null,
+    // Check local room store
+    const localRoom = getLocalRooms()[roomCode]
+    if (localRoom) {
+      return localRoom
     }
+
+    // No room found -> throw error (NO FAKE DEMO ROOM)
+    throw new RoomNotFoundError()
   },
 
   async updateRoomStatus(roomCode: string, status: 'waiting' | 'active' | 'ended'): Promise<void> {
@@ -102,6 +139,11 @@ export const roomService = {
         console.warn('Firestore update room status notice:', err)
       }
     }
+
+    const localRooms = getLocalRooms()
+    if (localRooms[roomCode]) {
+      localRooms[roomCode].status = status
+      localStorage.setItem(LOCAL_ROOMS_KEY, JSON.stringify(localRooms))
+    }
   },
 }
-

@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Cast,
   Check,
   Clock,
   Copy,
   LayoutDashboard,
+  Loader2,
   LogOut,
   Plus,
   Radio,
@@ -19,14 +20,17 @@ import { useAuth } from '../../auth/auth.context'
 import { useToast } from '../../notifications/toast.context'
 import { useRoomPresence } from '../../presence/useRoomPresence'
 import { teacherDashboardService } from '../teacher-dashboard.service'
+import { roomService } from '../../rooms/room.service'
 
 export function TeacherDashboardPage() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
+  const queryClient = useQueryClient()
   const [copiedCode, setCopiedCode] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [isCreating, setIsCreating] = useState(false)
 
   // Room Creation state
   const [newTitle, setNewTitle] = useState('')
@@ -34,23 +38,18 @@ export function TeacherDashboardPage() {
 
   const dashboard = useQuery({
     queryKey: ['teacher-dashboard', user?.uid],
-    queryFn: () => teacherDashboardService.getDashboard(user?.uid || 'teacher-default'),
+    queryFn: () => teacherDashboardService.getDashboard(user?.uid || ''),
+    enabled: Boolean(user?.uid),
   })
 
-  const currentRoom = dashboard.data?.currentRoom || {
-    id: 'room-default',
-    title: 'CS 401: Systems Programming Lab',
-    subject: 'Computer Science',
-    roomCode: 'LAB401',
-    status: 'idle',
-    startsAt: 'Live',
-    joinedStudents: 0,
-  }
+  // Only use a real room from the backend — no fallback fake room
+  const currentRoom = dashboard.data?.currentRoom || null
 
-  const presence = useRoomPresence(currentRoom.roomCode, 'teacher')
+  const presence = useRoomPresence(currentRoom?.roomCode || '', 'teacher')
   const liveStudents = presence.participants.filter((p) => p.role === 'student')
 
   const copyRoomCode = async () => {
+    if (!currentRoom) return
     await navigator.clipboard.writeText(currentRoom.roomCode)
     setCopiedCode(true)
     toast.success('Room Code Copied', currentRoom.roomCode)
@@ -58,27 +57,39 @@ export function TeacherDashboardPage() {
   }
 
   const shareRoomLink = async () => {
-    const link = `${window.location.origin}/room/${currentRoom.roomCode}`
+    if (!currentRoom) return
+    const link = `${window.location.origin}/join`
     await navigator.clipboard.writeText(link)
     setCopiedLink(true)
-    toast.success('Room Link Copied', link)
+    toast.success('Invite Link Copied', `Share ${link} with your students`)
     setTimeout(() => setCopiedLink(false), 2000)
   }
 
   const handleStartSession = () => {
-    toast.success('Starting Session', `Opening classroom ${currentRoom.roomCode}`)
+    if (!currentRoom) return
     navigate(`/room/${currentRoom.roomCode}`)
   }
 
-  const handleCreateRoom = (e: React.FormEvent) => {
+  const handleCreateRoom = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newTitle.trim()) return
-    const generatedCode = 'LAB' + Math.floor(100 + Math.random() * 900)
-    toast.success('Room Created', `Room ${generatedCode} is ready for students.`)
-    setShowCreateModal(false)
-    setNewTitle('')
-    setNewSubject('')
-    navigate(`/room/${generatedCode}`)
+    if (!newTitle.trim() || !user?.uid) return
+    setIsCreating(true)
+    try {
+      const created = await roomService.createRoom(
+        { title: newTitle.trim(), subject: newSubject.trim() || 'General' },
+        user.uid
+      )
+      toast.success('Room Created', `Room ${created.roomCode} is ready for students.`)
+      await queryClient.invalidateQueries({ queryKey: ['teacher-dashboard', user.uid] })
+      setShowCreateModal(false)
+      setNewTitle('')
+      setNewSubject('')
+      navigate(`/room/${created.roomCode}`)
+    } catch (err) {
+      toast.error('Create Failed', 'Could not create room. Please try again.')
+    } finally {
+      setIsCreating(false)
+    }
   }
 
   const teacherName = user?.displayName || user?.email?.split('@')[0] || 'Teacher'
@@ -179,59 +190,80 @@ export function TeacherDashboardPage() {
           <div className="grid gap-5 md:grid-cols-3">
             {/* Widget 1: Current Active Room */}
             <div className="md:col-span-2 rounded-[10px] border border-zinc-800 bg-zinc-900/60 p-5 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-400">
-                    <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Active Room
-                  </span>
+              {currentRoom ? (
+                <>
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-400">
+                        <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        Active Room
+                      </span>
 
-                  <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={shareRoomLink}
+                          className="h-7 px-2 rounded-[6px] border border-zinc-800 bg-zinc-950 text-[11px] font-medium text-zinc-300 hover:text-white transition-colors flex items-center gap-1"
+                        >
+                          {copiedLink ? <Check size={12} className="text-emerald-400" /> : <Share2 size={12} />}
+                          Share Link
+                        </button>
+
+                        <div className="flex items-center gap-1 bg-zinc-950 border border-zinc-800 px-2 py-0.5 rounded-[6px]">
+                          <span className="font-mono text-xs font-semibold text-zinc-100">
+                            {currentRoom.roomCode}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={copyRoomCode}
+                            className="p-0.5 text-zinc-400 hover:text-zinc-100 transition-colors ml-1"
+                            title="Copy Code"
+                          >
+                            {copiedCode ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <h2 className="text-base font-semibold text-zinc-100">{currentRoom.title}</h2>
+                    <p className="text-xs text-zinc-400 mt-1">{currentRoom.subject} • Ready for broadcast</p>
+                  </div>
+
+                  <div className="mt-6 flex items-center justify-between border-t border-zinc-800/80 pt-4">
+                    <div className="flex items-center gap-2 text-xs text-zinc-400">
+                      <Users size={14} className="text-blue-400" />
+                      <span>
+                        <strong className="text-zinc-200">{liveStudents.length}</strong> students connected
+                      </span>
+                    </div>
+
                     <button
                       type="button"
-                      onClick={shareRoomLink}
-                      className="h-7 px-2 rounded-[6px] border border-zinc-800 bg-zinc-950 text-[11px] font-medium text-zinc-300 hover:text-white transition-colors flex items-center gap-1"
+                      onClick={handleStartSession}
+                      className="h-9 px-4 rounded-[8px] bg-blue-600 text-white font-medium text-xs hover:bg-blue-500 transition-colors flex items-center gap-2 shadow-sm"
                     >
-                      {copiedLink ? <Check size={12} className="text-emerald-400" /> : <Share2 size={12} />}
-                      Share Link
+                      <Cast size={14} /> Launch Broadcast
                     </button>
-
-                    <div className="flex items-center gap-1 bg-zinc-950 border border-zinc-800 px-2 py-0.5 rounded-[6px]">
-                      <span className="font-mono text-xs font-semibold text-zinc-100">
-                        {currentRoom.roomCode}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={copyRoomCode}
-                        className="p-0.5 text-zinc-400 hover:text-zinc-100 transition-colors ml-1"
-                        title="Copy Code"
-                      >
-                        {copiedCode ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
-                      </button>
-                    </div>
                   </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full py-10 text-center gap-4">
+                  <div className="rounded-full bg-zinc-800/80 p-3">
+                    <Radio size={20} className="text-zinc-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-zinc-300">No active room</p>
+                    <p className="text-xs text-zinc-500 mt-1">Create a room to start broadcasting to your students.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateModal(true)}
+                    className="h-8 px-4 rounded-[8px] bg-blue-600 text-white font-medium text-xs hover:bg-blue-500 transition-colors flex items-center gap-1.5"
+                  >
+                    <Plus size={13} /> Create Room
+                  </button>
                 </div>
-
-                <h2 className="text-base font-semibold text-zinc-100">{currentRoom.title}</h2>
-                <p className="text-xs text-zinc-400 mt-1">{currentRoom.subject} • Ready for broadcast</p>
-              </div>
-
-              <div className="mt-6 flex items-center justify-between border-t border-zinc-800/80 pt-4">
-                <div className="flex items-center gap-2 text-xs text-zinc-400">
-                  <Users size={14} className="text-blue-400" />
-                  <span>
-                    <strong className="text-zinc-200">{liveStudents.length}</strong> students connected
-                  </span>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleStartSession}
-                  className="h-9 px-4 rounded-[8px] bg-blue-600 text-white font-medium text-xs hover:bg-blue-500 transition-colors flex items-center gap-2 shadow-sm"
-                >
-                  <Cast size={14} /> Launch Broadcast
-                </button>
-              </div>
+              )}
             </div>
 
             {/* Widget 2: Quick Create Room */}
@@ -260,9 +292,10 @@ export function TeacherDashboardPage() {
                   />
                   <button
                     type="submit"
-                    className="w-full h-9 rounded-[8px] border border-zinc-800 bg-zinc-800 text-zinc-100 text-xs font-medium hover:bg-zinc-700 transition-colors"
+                    disabled={isCreating || !newTitle.trim()}
+                    className="w-full h-9 rounded-[8px] border border-zinc-800 bg-zinc-800 text-zinc-100 text-xs font-medium hover:bg-zinc-700 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Create & Start
+                    {isCreating ? <><Loader2 size={12} className="animate-spin" /> Creating...</> : 'Create & Start'}
                   </button>
                 </form>
               </div>
@@ -299,9 +332,13 @@ export function TeacherDashboardPage() {
                 </div>
               ) : (
                 <div className="py-8 text-center text-xs text-zinc-500">
-                  No students connected to room{' '}
-                  <strong className="font-mono text-zinc-300">{currentRoom.roomCode}</strong> yet.
-                  <p className="mt-1 text-zinc-600">Students join at /join with this code.</p>
+                  {currentRoom ? (
+                    <>No students connected to room{' '}
+                    <strong className="font-mono text-zinc-300">{currentRoom.roomCode}</strong> yet.
+                    <p className="mt-1 text-zinc-600">Students join at /join with this code.</p></>
+                  ) : (
+                    <>No active room. Create a room first to see connected students.</>
+                  )}
                 </div>
               )}
             </div>
@@ -315,30 +352,33 @@ export function TeacherDashboardPage() {
                 <span className="text-xs text-zinc-400">History</span>
               </div>
 
-              <div className="space-y-2">
-                {[
-                  { title: 'CS 401 Systems Lab', code: 'LAB401', date: 'Today' },
-                  { title: 'Web Development Lab', code: 'WEB202', date: 'Yesterday' },
-                  { title: 'Data Structures Practicum', code: 'DS301', date: '3 days ago' },
-                ].map((room) => (
-                  <div
-                    key={room.code}
-                    className="flex items-center justify-between rounded-[8px] border border-zinc-800/80 bg-zinc-950/60 px-3 py-2 text-xs"
-                  >
-                    <div>
-                      <p className="font-medium text-zinc-200">{room.title}</p>
-                      <span className="font-mono text-[10px] text-zinc-500">{room.code}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/room/${room.code}`)}
-                      className="text-xs text-blue-400 hover:text-blue-300 font-medium"
+              {dashboard.data?.recentRooms && dashboard.data.recentRooms.length > 0 ? (
+                <div className="space-y-2">
+                  {dashboard.data.recentRooms.map((room) => (
+                    <div
+                      key={room.id}
+                      className="flex items-center justify-between rounded-[8px] border border-zinc-800/80 bg-zinc-950/60 px-3 py-2 text-xs"
                     >
-                      Open
-                    </button>
-                  </div>
-                ))}
-              </div>
+                      <div>
+                        <p className="font-medium text-zinc-200">{room.title}</p>
+                        <span className="font-mono text-[10px] text-zinc-500">{room.roomCode}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/room/${room.roomCode}`)}
+                        className="text-xs text-blue-400 hover:text-blue-300 font-medium"
+                      >
+                        Open
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-8 text-center text-xs text-zinc-500">
+                  No rooms created yet.
+                  <p className="mt-1 text-zinc-600">Rooms you create will appear here.</p>
+                </div>
+              )}
             </div>
           </div>
         </main>
@@ -395,9 +435,10 @@ export function TeacherDashboardPage() {
                 </button>
                 <button
                   type="submit"
-                  className="h-8 px-4 rounded-[8px] bg-blue-600 text-white font-medium text-xs hover:bg-blue-500 transition-colors"
+                  disabled={isCreating || !newTitle.trim()}
+                  className="h-8 px-4 rounded-[8px] bg-blue-600 text-white font-medium text-xs hover:bg-blue-500 transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Create & Launch
+                  {isCreating ? <><Loader2 size={12} className="animate-spin" /> Creating...</> : 'Create & Launch'}
                 </button>
               </div>
             </form>
