@@ -3,9 +3,11 @@ import {
   Cast,
   CheckCircle2,
   Hand,
-  MessageCircle,
-  MonitorUp,
+  Laptop,
+  MessageSquare,
+  Monitor,
   Shield,
+  Sparkles,
   Users,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -17,27 +19,29 @@ export function App() {
   const teacherDashPath = user ? '/teacher/dashboard' : '/login'
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans">
-      {/* Top Navbar */}
-      <header className="sticky top-0 z-30 border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-blue-500 selection:text-white">
+      {/* Navigation Bar */}
+      <header className="sticky top-0 z-40 border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
           <BrandMark />
-          <nav className="hidden items-center gap-6 text-sm text-zinc-400 md:flex">
+          <nav className="hidden items-center gap-6 text-xs font-medium text-zinc-400 md:flex">
+            <a href="#overview" className="hover:text-zinc-100 transition-colors">Overview</a>
             <a href="#features" className="hover:text-zinc-100 transition-colors">Features</a>
-            <a href="#how-it-works" className="hover:text-zinc-100 transition-colors">How it Works</a>
+            <a href="#workflow" className="hover:text-zinc-100 transition-colors">Workflow</a>
+            <a href="#audience" className="hover:text-zinc-100 transition-colors">Who it's for</a>
           </nav>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <Link
               to={teacherDashPath}
-              className="h-10 px-3.5 rounded-[10px] border border-zinc-800 bg-zinc-900 text-xs font-medium text-zinc-300 hover:text-white hover:border-zinc-700 transition-all inline-flex items-center justify-center"
+              className="h-8 px-3.5 rounded-[8px] border border-zinc-800 bg-zinc-900 text-xs font-medium text-zinc-300 hover:text-white hover:border-zinc-700 transition-all inline-flex items-center justify-center"
             >
               Teacher Login
             </Link>
             <Link
               to="/join"
-              className="h-10 px-4 rounded-[10px] bg-zinc-100 text-xs font-medium text-zinc-950 hover:bg-white transition-all inline-flex items-center justify-center gap-1.5"
+              className="h-8 px-3.5 rounded-[8px] bg-zinc-100 text-xs font-medium text-zinc-950 hover:bg-white transition-all inline-flex items-center justify-center gap-1.5"
             >
-              Join Classroom <ArrowRight size={14} />
+              Join Room <ArrowRight size={13} />
             </Link>
           </div>
         </div>
@@ -46,55 +50,123 @@ export function App() {
       <main className="mx-auto max-w-6xl px-4 sm:px-6">
         {/* Hero Section */}
         <section className="py-20 text-center sm:py-28">
-          <div className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/90 px-3 py-1 text-xs text-zinc-400 mb-6">
-            <span className="flex size-2 rounded-full bg-emerald-500" />
-            Computer Lab Collaboration Platform
+          <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-400 mb-6">
+            <Sparkles size={13} />
+            Real-time Computer Lab Screen Broadcasting
           </div>
 
-          <h1 className="mx-auto max-w-3xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-5xl lg:text-6xl">
-            Broadcast teacher screens directly to student displays.
+          <h1 className="mx-auto max-w-3xl text-3xl font-semibold tracking-tight text-zinc-100 sm:text-5xl lg:text-6xl leading-tight">
+            Mirror teacher displays directly onto student screens.
           </h1>
 
-          <p className="mx-auto mt-6 max-w-2xl text-sm leading-relaxed text-zinc-400 sm:text-base">
-            LabCast gives computer lab classrooms a shared point of view. Teacher shares screen once—every student watches from their own computer with zero delay.
+          <p className="mx-auto mt-6 max-w-2xl text-xs sm:text-sm leading-relaxed text-zinc-400">
+            LabCast eliminates projector glare and back-row visibility issues in computer labs.
+            The instructor shares screen once—every student's screen syncs instantly with zero lag.
           </p>
 
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
               to={teacherDashPath}
-              className="h-10 px-5 rounded-[10px] bg-zinc-100 text-sm font-medium text-zinc-950 hover:bg-white transition-all inline-flex items-center justify-center gap-2"
+              className="h-10 px-5 rounded-[10px] bg-blue-600 text-sm font-medium text-white hover:bg-blue-500 transition-all inline-flex items-center justify-center gap-2 shadow-sm"
             >
-              Start Teaching <Cast size={15} />
+              Start Broadcast <Cast size={15} />
             </Link>
             <Link
               to="/join"
               className="h-10 px-5 rounded-[10px] border border-zinc-800 bg-zinc-900 text-sm font-medium text-zinc-200 hover:bg-zinc-800 transition-all inline-flex items-center justify-center gap-2"
             >
-              Join Classroom <ArrowRight size={15} />
+              Join as Student <ArrowRight size={15} />
             </Link>
           </div>
         </section>
 
-        {/* Problem & Solution */}
-        <section className="py-12 border-t border-zinc-800/80">
+        {/* What LabCast Is */}
+        <section id="overview" className="py-12 border-t border-zinc-800/80">
           <div className="grid gap-6 md:grid-cols-2">
-            <div className="rounded-[10px] border border-zinc-800 bg-zinc-900/50 p-6">
-              <span className="text-xs font-mono uppercase tracking-wider text-rose-400">Problem</span>
-              <h2 className="mt-2 text-lg font-semibold tracking-tight text-zinc-100">
-                Back-row students cannot clearly see the projector.
+            <div className="rounded-[10px] border border-zinc-800 bg-zinc-900/40 p-6">
+              <span className="text-[11px] font-mono uppercase tracking-wider text-rose-400 font-medium">The Classroom Problem</span>
+              <h2 className="mt-2 text-base font-semibold text-zinc-100">
+                Back-row students crowd around monitors or struggle with low-res projectors.
               </h2>
               <p className="mt-2 text-xs leading-relaxed text-zinc-400">
-                In computer labs, long distances, small code fonts, and low projector resolution cause students to lose track during practical sessions.
+                In 40 to 100 student computer labs, reading small IDE code lines or complex terminal output on a distant projector leads to confusion and lost focus.
               </p>
             </div>
 
-            <div className="rounded-[10px] border border-zinc-800 bg-zinc-900/50 p-6">
-              <span className="text-xs font-mono uppercase tracking-wider text-emerald-400">Solution</span>
-              <h2 className="mt-2 text-lg font-semibold tracking-tight text-zinc-100">
-                Direct 1-to-many high-definition screen broadcast.
+            <div className="rounded-[10px] border border-zinc-800 bg-zinc-900/40 p-6">
+              <span className="text-[11px] font-mono uppercase tracking-wider text-emerald-400 font-medium">The LabCast Solution</span>
+              <h2 className="mt-2 text-base font-semibold text-zinc-100">
+                Direct 1-to-Many WebRTC high-definition screen mirroring.
               </h2>
               <p className="mt-2 text-xs leading-relaxed text-zinc-400">
-                The teacher broadcasts their screen over local WebRTC/socket streams. Students open their web browser and follow along on their own desk screen.
+                LabCast streams the instructor's screen over ultra-low latency WebRTC. Students open a browser, enter the 6-character room code, and watch on their desk screen.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Simple Workflow */}
+        <section id="workflow" className="py-16 border-t border-zinc-800/80">
+          <div className="mb-10">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-blue-400 font-medium">Simple 5-Step Workflow</span>
+            <h2 className="mt-1.5 text-xl font-semibold tracking-tight text-zinc-100">
+              How a LabCast session works in practice.
+            </h2>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="rounded-[10px] border border-zinc-800 bg-zinc-900/40 p-4">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-xs text-blue-400 font-bold">01</span>
+                <Cast size={15} className="text-zinc-500" />
+              </div>
+              <h3 className="mt-3 text-xs font-semibold text-zinc-100">Teacher Creates Room</h3>
+              <p className="mt-1 text-[11px] text-zinc-400 leading-relaxed">
+                Log into dashboard and start a room session with a unique code.
+              </p>
+            </div>
+
+            <div className="rounded-[10px] border border-zinc-800 bg-zinc-900/40 p-4">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-xs text-blue-400 font-bold">02</span>
+                <Users size={15} className="text-zinc-500" />
+              </div>
+              <h3 className="mt-3 text-xs font-semibold text-zinc-100">Students Join</h3>
+              <p className="mt-1 text-[11px] text-zinc-400 leading-relaxed">
+                Students enter name & room code. No registration required.
+              </p>
+            </div>
+
+            <div className="rounded-[10px] border border-zinc-800 bg-zinc-900/40 p-4">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-xs text-blue-400 font-bold">03</span>
+                <Monitor size={15} className="text-zinc-500" />
+              </div>
+              <h3 className="mt-3 text-xs font-semibold text-zinc-100">Teacher Shares Screen</h3>
+              <p className="mt-1 text-[11px] text-zinc-400 leading-relaxed">
+                Instructor clicks Share Screen to stream IDE or slides.
+              </p>
+            </div>
+
+            <div className="rounded-[10px] border border-zinc-800 bg-zinc-900/40 p-4">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-xs text-blue-400 font-bold">04</span>
+                <Laptop size={15} className="text-zinc-500" />
+              </div>
+              <h3 className="mt-3 text-xs font-semibold text-zinc-100">Students Watch</h3>
+              <p className="mt-1 text-[11px] text-zinc-400 leading-relaxed">
+                Students follow along crystal-clear on their local lab monitor.
+              </p>
+            </div>
+
+            <div className="rounded-[10px] border border-zinc-800 bg-zinc-900/40 p-4">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-xs text-blue-400 font-bold">05</span>
+                <Hand size={15} className="text-zinc-500" />
+              </div>
+              <h3 className="mt-3 text-xs font-semibold text-zinc-100">Ask Doubts & End</h3>
+              <p className="mt-1 text-[11px] text-zinc-400 leading-relaxed">
+                Students raise hands or chat. Teacher ends class when done.
               </p>
             </div>
           </div>
@@ -103,150 +175,140 @@ export function App() {
         {/* Features */}
         <section id="features" className="py-16 border-t border-zinc-800/80">
           <div className="mb-10">
-            <span className="text-xs font-mono uppercase tracking-wider text-blue-400">Capabilities</span>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-100">
-              Built for real classroom workflows.
+            <span className="text-[11px] font-mono uppercase tracking-wider text-emerald-400 font-medium">Key Capabilities</span>
+            <h2 className="mt-1.5 text-xl font-semibold tracking-tight text-zinc-100">
+              Designed specifically for institutional computer labs.
             </h2>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div className="rounded-[10px] border border-zinc-800 bg-zinc-900/60 p-5">
-              <div className="flex size-9 items-center justify-center rounded-[8px] border border-zinc-800 bg-zinc-950 text-blue-400 mb-4">
-                <MonitorUp size={18} />
+              <div className="flex size-8 items-center justify-center rounded-[8px] border border-zinc-800 bg-zinc-950 text-blue-400 mb-3.5">
+                <Monitor size={17} />
               </div>
-              <h3 className="text-sm font-semibold text-zinc-100">Live Screen Sharing</h3>
+              <h3 className="text-xs font-semibold text-zinc-100">Real WebRTC Screen Stream</h3>
               <p className="mt-1.5 text-xs text-zinc-400 leading-relaxed">
-                High-definition screen capture stream directly to student displays with zero software installation.
+                High-definition browser display capture streamed to all student devices without installing software.
               </p>
             </div>
 
             <div className="rounded-[10px] border border-zinc-800 bg-zinc-900/60 p-5">
-              <div className="flex size-9 items-center justify-center rounded-[8px] border border-zinc-800 bg-zinc-950 text-amber-400 mb-4">
-                <Hand size={18} />
+              <div className="flex size-8 items-center justify-center rounded-[8px] border border-zinc-800 bg-zinc-950 text-amber-400 mb-3.5">
+                <Hand size={17} />
               </div>
-              <h3 className="text-sm font-semibold text-zinc-100">Raise Hand</h3>
+              <h3 className="text-xs font-semibold text-zinc-100">Real-time Raise Hand</h3>
               <p className="mt-1.5 text-xs text-zinc-400 leading-relaxed">
-                Students can signal for help discreetly without interrupting the ongoing lecture flow.
+                Students signal for help with one click. Teachers get instant notifications with student names.
               </p>
             </div>
 
             <div className="rounded-[10px] border border-zinc-800 bg-zinc-900/60 p-5">
-              <div className="flex size-9 items-center justify-center rounded-[8px] border border-zinc-800 bg-zinc-950 text-purple-400 mb-4">
-                <Users size={18} />
+              <div className="flex size-8 items-center justify-center rounded-[8px] border border-zinc-800 bg-zinc-950 text-cyan-400 mb-3.5">
+                <MessageSquare size={17} />
               </div>
-              <h3 className="text-sm font-semibold text-zinc-100">Student Screen Sharing</h3>
+              <h3 className="text-xs font-semibold text-zinc-100">Live Classroom Chat</h3>
               <p className="mt-1.5 text-xs text-zinc-400 leading-relaxed">
-                Teachers can inspect or broadcast a student&apos;s solution to demonstrate progress.
+                Instant text channel for code snippets, link sharing, and class questions.
               </p>
             </div>
 
             <div className="rounded-[10px] border border-zinc-800 bg-zinc-900/60 p-5">
-              <div className="flex size-9 items-center justify-center rounded-[8px] border border-zinc-800 bg-zinc-950 text-emerald-400 mb-4">
-                <CheckCircle2 size={18} />
+              <div className="flex size-8 items-center justify-center rounded-[8px] border border-zinc-800 bg-zinc-950 text-emerald-400 mb-3.5">
+                <Users size={17} />
               </div>
-              <h3 className="text-sm font-semibold text-zinc-100">Attendance</h3>
+              <h3 className="text-xs font-semibold text-zinc-100">Real-time Presence</h3>
               <p className="mt-1.5 text-xs text-zinc-400 leading-relaxed">
-                Automatic active session log of joined student participants upon entering the room code.
+                Live list of connected students with instant join and leave detection.
               </p>
             </div>
 
             <div className="rounded-[10px] border border-zinc-800 bg-zinc-900/60 p-5">
-              <div className="flex size-9 items-center justify-center rounded-[8px] border border-zinc-800 bg-zinc-950 text-rose-400 mb-4">
-                <Shield size={18} />
+              <div className="flex size-8 items-center justify-center rounded-[8px] border border-zinc-800 bg-zinc-950 text-purple-400 mb-3.5">
+                <CheckCircle2 size={17} />
               </div>
-              <h3 className="text-sm font-semibold text-zinc-100">Teacher Controls</h3>
+              <h3 className="text-xs font-semibold text-zinc-100">No Student Login Required</h3>
               <p className="mt-1.5 text-xs text-zinc-400 leading-relaxed">
-                Host controls to manage stream broadcast, student permissions, and room sessions.
+                Shared computer lab computers need frictionless access. Students enter Name and Room Code to join.
               </p>
             </div>
 
             <div className="rounded-[10px] border border-zinc-800 bg-zinc-900/60 p-5">
-              <div className="flex size-9 items-center justify-center rounded-[8px] border border-zinc-800 bg-zinc-950 text-cyan-400 mb-4">
-                <MessageCircle size={18} />
+              <div className="flex size-8 items-center justify-center rounded-[8px] border border-zinc-800 bg-zinc-950 text-rose-400 mb-3.5">
+                <Shield size={17} />
               </div>
-              <h3 className="text-sm font-semibold text-zinc-100">Classroom Chat</h3>
+              <h3 className="text-xs font-semibold text-zinc-100">Teacher Control Center</h3>
               <p className="mt-1.5 text-xs text-zinc-400 leading-relaxed">
-                Instant text channel for code snippets, link sharing, and class discussions.
+                Full host authority to manage broadcast status, mute mic, dismiss hands, and end sessions cleanly.
               </p>
             </div>
           </div>
         </section>
 
-        {/* How It Works */}
-        <section id="how-it-works" className="py-16 border-t border-zinc-800/80">
+        {/* Who It Is For */}
+        <section id="audience" className="py-16 border-t border-zinc-800/80">
           <div className="mb-10">
-            <span className="text-xs font-mono uppercase tracking-wider text-emerald-400">Workflow</span>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-100">
-              How LabCast works in 4 steps.
+            <span className="text-[11px] font-mono uppercase tracking-wider text-purple-400 font-medium">Target Audience</span>
+            <h2 className="mt-1.5 text-xl font-semibold tracking-tight text-zinc-100">
+              Built for university and college computer labs.
             </h2>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-3">
             <div className="rounded-[10px] border border-zinc-800 bg-zinc-900/40 p-5">
-              <span className="font-mono text-xs text-zinc-500 font-medium">01</span>
-              <h3 className="mt-2 text-sm font-semibold text-zinc-100">Teacher Creates Room</h3>
-              <p className="mt-1 text-xs text-zinc-400">
-                Log into dashboard, create a session, and generate a 6-character room code.
+              <h3 className="text-xs font-semibold text-zinc-100">Computer Science Labs</h3>
+              <p className="mt-1.5 text-xs text-zinc-400 leading-relaxed">
+                Ideal for programming, data structures, systems, and algorithms practical classes where students need to inspect code syntax line by line.
               </p>
             </div>
 
             <div className="rounded-[10px] border border-zinc-800 bg-zinc-900/40 p-5">
-              <span className="font-mono text-xs text-zinc-500 font-medium">02</span>
-              <h3 className="mt-2 text-sm font-semibold text-zinc-100">Students Join</h3>
-              <p className="mt-1 text-xs text-zinc-400">
-                Students enter their name & room code. No registration or email needed.
+              <h3 className="text-xs font-semibold text-zinc-100">Design & Engineering Labs</h3>
+              <p className="mt-1.5 text-xs text-zinc-400 leading-relaxed">
+                Demonstrate CAD modeling, software architecture, UI design, or data analytics software live across 40–100 student monitors simultaneously.
               </p>
             </div>
 
             <div className="rounded-[10px] border border-zinc-800 bg-zinc-900/40 p-5">
-              <span className="font-mono text-xs text-zinc-500 font-medium">03</span>
-              <h3 className="mt-2 text-sm font-semibold text-zinc-100">Start Screen Share</h3>
-              <p className="mt-1 text-xs text-zinc-400">
-                Teacher clicks share screen to instantly stream IDE or slides to all devices.
-              </p>
-            </div>
-
-            <div className="rounded-[10px] border border-zinc-800 bg-zinc-900/40 p-5">
-              <span className="font-mono text-xs text-zinc-500 font-medium">04</span>
-              <h3 className="mt-2 text-sm font-semibold text-zinc-100">Collaborate & Ask</h3>
-              <p className="mt-1 text-xs text-zinc-400">
-                Students follow along on their display, raise hands, or post in chat.
+              <h3 className="text-xs font-semibold text-zinc-100">IT Workshops & Bootcamps</h3>
+              <p className="mt-1.5 text-xs text-zinc-400 leading-relaxed">
+                Conduct technical training with zero setup time. Students join instantly using a simple web link or room code.
               </p>
             </div>
           </div>
         </section>
 
-        {/* CTA */}
+        {/* Bottom CTA */}
         <section className="py-16 border-t border-zinc-800/80 mb-12">
           <div className="rounded-[10px] border border-zinc-800 bg-zinc-900 p-8 text-center sm:p-12">
-            <h2 className="text-xl font-semibold tracking-tight text-zinc-100 sm:text-2xl">
-              Ready for your next lab session?
+            <h2 className="text-lg font-semibold tracking-tight text-zinc-100 sm:text-xl">
+              Ready for your next lab broadcast session?
             </h2>
-            <p className="mt-2 text-xs text-zinc-400 sm:text-sm">
-              No software setup required. Works in any desktop web browser.
+            <p className="mt-1.5 text-xs text-zinc-400">
+              No installation or complex network configuration required. Works in modern web browsers.
             </p>
             <div className="mt-6 flex items-center justify-center gap-3">
               <Link
                 to={teacherDashPath}
-                className="h-10 px-5 rounded-[10px] bg-zinc-100 text-sm font-medium text-zinc-950 hover:bg-white transition-all inline-flex items-center justify-center gap-2"
+                className="h-9 px-4 rounded-[8px] bg-blue-600 text-xs font-medium text-white hover:bg-blue-500 transition-colors inline-flex items-center gap-2"
               >
-                Start Teaching
+                Teacher Dashboard
               </Link>
               <Link
                 to="/join"
-                className="h-10 px-5 rounded-[10px] border border-zinc-800 bg-zinc-950 text-sm font-medium text-zinc-200 hover:bg-zinc-800 transition-all inline-flex items-center justify-center gap-2"
+                className="h-9 px-4 rounded-[8px] border border-zinc-800 bg-zinc-950 text-xs font-medium text-zinc-200 hover:bg-zinc-800 transition-colors inline-flex items-center gap-2"
               >
-                Join Classroom
+                Student Join
               </Link>
             </div>
           </div>
         </section>
       </main>
 
+      {/* Footer */}
       <footer className="border-t border-zinc-800/80 py-6 text-center text-xs text-zinc-500">
         <div className="mx-auto max-w-6xl px-4 flex flex-col items-center justify-between gap-4 sm:flex-row">
           <BrandMark compact />
-          <p>© {new Date().getFullYear()} LabCast. Built for modern computer labs.</p>
+          <p>© {new Date().getFullYear()} LabCast. Classroom broadcasting for computer labs.</p>
         </div>
       </footer>
     </div>

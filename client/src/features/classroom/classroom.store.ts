@@ -106,15 +106,8 @@ export const useClassroomStore = create<ClassroomState>((set, get) => {
     isScreenSharing: false,
     screenShareStreamUrl: null,
     currentSlideIndex: 0,
-    raisedHands: [
-      { userId: 'student-demo-1', userName: 'Alex Morgan', timestamp: '10:42 AM' },
-      { userId: 'student-demo-2', userName: 'Jordan Rivera', timestamp: '10:44 AM' },
-    ],
-    messages: [
-      { id: 'm1', senderId: 'teacher-1', senderName: 'Prof. Anderson', senderRole: 'teacher', text: 'Welcome to CS 401 lab! Please turn to slide 3.', timestamp: '10:30 AM' },
-      { id: 'm2', senderId: 's1', senderName: 'Sarah Chen', senderRole: 'student', text: 'Will the codebase demo be available after class?', timestamp: '10:32 AM' },
-      { id: 'm3', senderId: 'teacher-1', senderName: 'Prof. Anderson', senderRole: 'teacher', text: 'Yes, recorded and uploaded to your dashboard.', timestamp: '10:33 AM' },
-    ],
+    raisedHands: [],
+    messages: [],
     reactions: [],
     micEnabled: false,
     cameraEnabled: false,
