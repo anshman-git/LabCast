@@ -17,15 +17,30 @@ const io = new Server(httpServer, { cors: { origin: config.clientOrigin, methods
 io.use(async (socket, next) => {
     try {
         const token = socket.handshake.auth.token;
-        if (typeof token !== 'string' || !token)
-            return next(new Error('UNAUTHORIZED'));
-        const decoded = await getAuth().verifyIdToken(token);
-        socket.data.userId = decoded.uid;
-        socket.data.displayName = typeof decoded.name === 'string' ? decoded.name : decoded.email ?? 'LabCast user';
+        const guestName = socket.handshake.auth.guestName;
+        const guestId = socket.handshake.auth.guestId;
+        if (token && typeof token === 'string' && token !== 'guest') {
+            try {
+                const decoded = await getAuth().verifyIdToken(token);
+                socket.data.userId = decoded.uid;
+                socket.data.displayName = typeof decoded.name === 'string' ? decoded.name : decoded.email ?? 'Teacher';
+                socket.data.role = 'teacher';
+                return next();
+            }
+            catch {
+                // Token verification failed, fallback to guest if guestName present
+            }
+        }
+        // Guest student auth
+        const effectiveName = typeof guestName === 'string' && guestName.trim() ? guestName.trim() : 'Guest Student';
+        const effectiveId = typeof guestId === 'string' && guestId.trim() ? guestId.trim() : `guest_${Math.random().toString(36).substring(2, 9)}`;
+        socket.data.userId = effectiveId;
+        socket.data.displayName = effectiveName;
+        socket.data.role = 'student';
         next();
     }
-    catch {
-        next(new Error('UNAUTHORIZED'));
+    catch (err) {
+        next(new Error('AUTHENTICATION_FAILED'));
     }
 });
 registerPresenceGateway(io, new PresenceRegistry(config.reconnectGraceMs));

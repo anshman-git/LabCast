@@ -56,15 +56,19 @@ export function TeacherClassroomView({ roomCode }: { roomCode: string }) {
   }, [])
 
   // Real Socket listener for Chat and Hand Raises
+  // FIX #3: Ensure socket is connected AND listeners are properly attached
   useEffect(() => {
     const socket = presence.socket
-    if (!socket) return
+    // FIX #9: Check that socket is actually connected, not just exists
+    if (!socket || !presence.isConnected) return
 
     const handleChatMessage = (msg: ChatMessage) => {
-      // Store in classroom store
-      if (msg.senderId !== user?.uid) {
-        sendMessage(msg)
+      // FIX #3: Fix message filtering logic - receive messages from OTHER users
+      if (msg.senderId === user?.uid) {
+        // This is our own message being echoed back, don't double-add
+        return
       }
+      sendMessage(msg)
     }
 
     const handleHandRaised = (payload: { userId: string; userName: string }) => {
@@ -85,7 +89,7 @@ export function TeacherClassroomView({ roomCode }: { roomCode: string }) {
       socket.off('hand:raised', handleHandRaised)
       socket.off('hand:lowered', handleHandLowered)
     }
-  }, [presence.socket, user, sendMessage, raiseHand, lowerHand, toast])
+  }, [presence.socket, presence.isConnected, user, sendMessage, raiseHand, lowerHand, toast])
 
   const formatTimer = (totalSeconds: number) => {
     const hrs = Math.floor(totalSeconds / 3600)

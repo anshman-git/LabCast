@@ -57,14 +57,19 @@ export function StudentClassroomView({
   const isHandRaised = raisedHands.some((h) => h.userId === guestId)
 
   // Real Socket listener for Chat and Hand Raises
+  // FIX #3: Ensure socket is connected AND listeners are properly attached
   useEffect(() => {
     const socket = presence.socket
-    if (!socket) return
+    // FIX #9: Check that socket is actually connected, not just exists
+    if (!socket || !presence.isConnected) return
 
     const handleChatMessage = (msg: ChatMessage) => {
-      if (msg.senderId !== guestId) {
-        sendMessage(msg)
+      // FIX #3: Fix message filtering logic - receive messages from OTHER users
+      if (msg.senderId === guestId) {
+        // This is our own message being echoed back, don't double-add
+        return
       }
+      sendMessage(msg)
     }
 
     const handleHandRaised = (payload: { userId: string; userName: string }) => {
@@ -84,7 +89,7 @@ export function StudentClassroomView({
       socket.off('hand:raised', handleHandRaised)
       socket.off('hand:lowered', handleHandLowered)
     }
-  }, [presence.socket, guestId, sendMessage, raiseHand, lowerHand])
+  }, [presence.socket, presence.isConnected, guestId, sendMessage, raiseHand, lowerHand])
 
   const copyRoomCode = async () => {
     await navigator.clipboard.writeText(roomCode)

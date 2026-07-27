@@ -5,8 +5,8 @@ import { useAuth } from '../auth/auth.context'
 import { createPresenceSocket } from './presence.socket'
 import type { JoinResponse, PresenceParticipant, PresenceRole, PresenceStatus } from './presence.types'
 
-type PresenceState = { participants: PresenceParticipant[]; status: PresenceStatus; error: string | null }
-const initialState: PresenceState = { participants: [], status: 'idle', error: null }
+type PresenceState = { participants: PresenceParticipant[]; status: PresenceStatus; error: string | null; isConnected: boolean }
+const initialState: PresenceState = { participants: [], status: 'idle', error: null, isConnected: false }
 
 export function useRoomPresence(
   roomCode: string | null,
@@ -24,84 +24,129 @@ export function useRoomPresence(
       return
     }
 
-    // For students, no login is required
     const isStudent = role === 'student'
     if (!isStudent && !user) {
       setState(initialState)
       return
     }
 
-    let socket: Socket | undefined
     let disposed = false
+    let joinAttempted = false
 
-    const connect = async () => {
-      try {
-        const studentName = guestName || sessionStorage.getItem('labcast_student_name') || 'Student'
-        const studentId = guestId || sessionStorage.getItem('labcast_guest_id') || `guest_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`
+    const studentName = guestName || sessionStorage.getItem('labcast_student_name') || 'Student'
+    const studentId = guestId || sessionStorage.getItem('labcast_guest_id') || `guest_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`
 
-        socket = createPresenceSocket(
-          user
-            ? async () => {
-                const currentUser = firebaseAuth?.currentUser
-                if (currentUser) return currentUser.getIdToken()
-                return 'guest'
-              }
-            : undefined,
-          { guestName: studentName, guestId: studentId }
-        )
+    const socket = createPresenceSocket(
+      user
+        ? async () => {
+            const currentUser = firebaseAuth?.currentUser
+            if (currentUser) return currentUser.getIdToken()
+            return 'guest'
+          }
+        : undefined,
+      { guestName: studentName, guestId: studentId }
+    )
 
-        setSocketInstance(socket)
+    const displayName = user
+      ? user.displayName || user.email?.split('@')[0] || 'Teacher'
+      : studentName
 
-        const displayName = user
-          ? user.displayName || user.email?.split('@')[0] || 'Teacher'
-          : studentName
-
-        const join = () => {
-          if (!socket || disposed) return
-          setState((current) => ({ ...current, status: 'connecting', error: null }))
-          socket.emit(
-            'presence:join',
-            { roomCode, role, displayName, guestId: studentId },
-            (response: JoinResponse) => {
-              if (disposed) return
-              if (response.ok) setState({ participants: response.participants, status: 'joined', error: null })
-              else setState({ participants: [], status: 'error', error: response.message })
-            }
-          )
-        }
-
-        socket.on('connect', join)
-        socket.on('presence:participants', (participants: PresenceParticipant[]) => {
-          if (!disposed) setState({ participants, status: 'joined', error: null })
-        })
-        socket.on('connect_error', (err) => {
-          if (!disposed) {
-            console.warn('Presence socket connection notice:', err.message)
-            setState((current) => ({
-              ...current,
+    const emitPresenceJoin = () => {
+      if (disposed || joinAttempted) return
+      joinAttempted = true
+      console.log('[PRESENCE] Socket connected, attempting to join room:', { roomCode, role, displayName })
+      setState((current) => ({ ...current, status: 'connecting', error: null }))
+      console.log('[PRESENCE] Emitting presence:join event with payload:', { roomCode, role, displayName, guestId: studentId })
+      socket.emit(
+        'presence:join',
+        { roomCode, role, displayName, guestId: studentId },
+        (response: JoinResponse) => {
+          console.log('[PRESENCE] Received join response:', response)
+          if (disposed) return
+          if (response.ok) {
+            console.log('[PRESENCE] Join successful, participants count:', response.participants.length, 'Participants:', response.participants)
+            setState({
+              participants: response.participants,
               status: 'joined',
               error: null,
-            }))
+              isConnected: true,
+            })
+          } else {
+            console.error('[PRESENCE] Join failed:', response.code, response.message)
+            setState({
+              participants: [],
+              status: 'error',
+              error: response.message,
+              isConnected: false,
+            })
           }
-        })
-
-        socket.connect()
-      } catch (error) {
-        if (!disposed) {
-          setState({
-            participants: [],
-            status: 'joined',
-            error: null,
-          })
         }
+      )
+    }
+
+    const handlePresenceParticipants = (participants: PresenceParticipant[]) => {
+      console.log('[PRESENCE] Received presence:participants broadcast, count:', participants.length, 'Participants:', participants)
+      if (!disposed) {
+        setState((current) => ({
+          ...current,
+          participants,
+          status: 'joined',
+          error: null,
+          isConnected: true,
+        }))
       }
     }
 
-    void connect()
+    const handleConnect = () => {
+      if (!disposed && !joinAttempted) {
+        emitPresenceJoin()
+      }
+    }
+
+    const handleConnectError = (err: Error) => {
+      if (!disposed) {
+        console.error('Presence socket connection error:', err.message)
+        setState((current) => ({
+          ...current,
+          status: 'error',
+          error: err.message || 'Connection failed',
+          isConnected: false,
+        }))
+      }
+    }
+
+    const handleDisconnect = (reason: string) => {
+      if (!disposed) {
+        console.warn('Presence socket disconnected:', reason)
+        setState((current) => ({
+          ...current,
+          status: 'disconnected',
+          isConnected: false,
+          error: reason,
+        }))
+        joinAttempted = false
+      }
+    }
+
+    socket.on('connect', handleConnect)
+    socket.on('presence:participants', handlePresenceParticipants)
+    socket.on('connect_error', handleConnectError)
+    socket.on('disconnect', handleDisconnect)
+
+    setSocketInstance(socket)
+    socket.connect()
+
+    if (socket.connected) {
+      emitPresenceJoin()
+    }
+
     return () => {
       disposed = true
-      socket?.emit('presence:leave')
-      socket?.disconnect()
+      socket.emit('presence:leave')
+      socket.off('connect', handleConnect)
+      socket.off('presence:participants', handlePresenceParticipants)
+      socket.off('connect_error', handleConnectError)
+      socket.off('disconnect', handleDisconnect)
     }
   }, [role, roomCode, user, guestName, guestId])
 
