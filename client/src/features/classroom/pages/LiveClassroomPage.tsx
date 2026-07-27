@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
-import { LoaderCircle } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { useParams } from 'react-router-dom'
-import { attendanceService } from '../../attendance/attendance.service'
 import { useAuth } from '../../auth/auth.context'
 import { roomService } from '../../rooms/room.service'
 import { type Room } from '../../rooms/room.types'
@@ -14,7 +13,10 @@ export function LiveClassroomPage() {
   const [room, setRoom] = useState<Room | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const normalizedCode = (roomCode || 'DEMO01').toUpperCase()
+  const normalizedCode = (roomCode || 'LAB401').toUpperCase()
+
+  // Guest student name stored by JoinRoomPage
+  const guestStudentName = sessionStorage.getItem('labcast_student_name') || 'Student'
 
   useEffect(() => {
     let isMounted = true
@@ -24,12 +26,6 @@ export function LiveClassroomPage() {
         const fetchedRoom = await roomService.getRoomByCode(normalizedCode)
         if (isMounted) {
           setRoom(fetchedRoom)
-        }
-
-        // Record attendance automatically in Firestore & local state
-        if (user) {
-          const isTeacherUser = user.uid === fetchedRoom.teacherId
-          await attendanceService.markAttendance(normalizedCode, user, isTeacherUser ? 'teacher' : 'student')
         }
       } catch (err) {
         console.warn('Classroom initialization notice:', err)
@@ -42,25 +38,33 @@ export function LiveClassroomPage() {
     return () => {
       isMounted = false
     }
-  }, [normalizedCode, user])
+  }, [normalizedCode])
 
   if (loading) {
     return (
-      <main className="grid min-h-screen place-items-center bg-slate-950 text-slate-300">
-        <div className="flex flex-col items-center gap-4">
-          <LoaderCircle className="animate-spin text-sky-400 size-8" />
-          <p className="text-sm font-semibold tracking-wide">Initializing LabCast Smart Classroom...</p>
+      <main className="grid min-h-screen place-items-center bg-zinc-950 text-zinc-300 font-sans">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="animate-spin text-blue-500 size-6" />
+          <p className="text-xs font-medium text-zinc-400">
+            Connecting to classroom <strong className="font-mono text-zinc-200">{normalizedCode}</strong>...
+          </p>
         </div>
       </main>
     )
   }
 
-  // Determine user role (If teacher created room or is logged in as teacher)
-  const isTeacherRole = user?.uid === room?.teacherId || user?.displayName?.toLowerCase().includes('prof') || user?.email?.toLowerCase().includes('teacher')
+  // Teacher: authenticated user who owns the room, or teacher-flagged account
+  const isTeacherRole = Boolean(
+    user &&
+      (user.uid === room?.teacherId ||
+        user.email?.toLowerCase().includes('teacher') ||
+        user.displayName?.toLowerCase().includes('prof'))
+  )
 
   if (isTeacherRole) {
     return <TeacherClassroomView roomCode={normalizedCode} />
   }
 
-  return <StudentClassroomView roomCode={normalizedCode} />
+  // Default: Guest student view
+  return <StudentClassroomView roomCode={normalizedCode} guestName={guestStudentName} />
 }

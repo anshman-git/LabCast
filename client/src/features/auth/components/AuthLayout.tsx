@@ -1,6 +1,36 @@
 import { Link } from 'react-router-dom'
 import type { PropsWithChildren } from 'react'
+import { BrandMark } from '../../../components/BrandMark'
 
-export function AuthLayout({ title, subtitle, children }: PropsWithChildren<{ title: string; subtitle: string }>) {
-  return <main className="grid min-h-screen place-items-center bg-ink px-5 py-10"><section className="w-full max-w-md rounded-3xl border border-white/10 bg-white/[0.04] p-7 shadow-2xl backdrop-blur sm:p-9"><Link className="font-display text-xl font-bold tracking-tight text-sky-aqua" to="/">LabCast</Link><h1 className="mt-8 font-display text-3xl font-semibold text-cloud">{title}</h1><p className="mt-2 text-sm leading-6 text-mist">{subtitle}</p>{children}</section></main>
+export function AuthLayout({
+  title,
+  subtitle,
+  children,
+}: PropsWithChildren<{ title: string; subtitle: string }>) {
+  return (
+    <main className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-4 font-sans">
+      <div className="w-full max-w-sm">
+        {/* Card */}
+        <div className="rounded-[10px] border border-zinc-800 bg-zinc-900/90 p-6 shadow-sm">
+          {/* Logo */}
+          <div className="flex justify-center mb-6">
+            <BrandMark />
+          </div>
+
+          {/* Title */}
+          <div className="text-center mb-6">
+            <h1 className="text-lg font-semibold tracking-tight text-zinc-100">{title}</h1>
+            <p className="text-xs text-zinc-400 mt-1">{subtitle}</p>
+          </div>
+
+          {children}
+        </div>
+
+        {/* Footer note */}
+        <p className="mt-4 text-center text-[11px] text-zinc-600">
+          For students: <Link to="/join" className="text-zinc-400 hover:text-zinc-200 underline underline-offset-2">Join a classroom without an account →</Link>
+        </p>
+      </div>
+    </main>
+  )
 }

@@ -1,13 +1,14 @@
 import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
-  CalendarDays,
+  Cast,
   Check,
+  Clock,
   Copy,
-  LoaderCircle,
-  Play,
+  LayoutDashboard,
+  LogOut,
   Plus,
-  UserPlus,
+  Radio,
   Users,
   X,
 } from 'lucide-react'
@@ -19,317 +20,359 @@ import { useRoomPresence } from '../../presence/useRoomPresence'
 import { teacherDashboardService } from '../teacher-dashboard.service'
 
 export function TeacherDashboardPage() {
-  const { user } = useAuth()
+  const { user, signOut } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
   const [copied, setCopied] = useState(false)
-  const [showInviteModal, setShowInviteModal] = useState(false)
-  const [inviteEmail, setInviteEmail] = useState('')
+  const [showCreateModal, setShowCreateModal] = useState(false)
+
+  // Room Creation state
+  const [newTitle, setNewTitle] = useState('')
+  const [newSubject, setNewSubject] = useState('')
 
   const dashboard = useQuery({
     queryKey: ['teacher-dashboard', user?.uid],
-    queryFn: () => teacherDashboardService.getDashboard(user!.uid),
+    queryFn: () => teacherDashboardService.getDashboard(user?.uid || 'teacher-default'),
   })
 
-  const roomCode = dashboard.data?.currentRoom.roomCode || 'LAB401'
-  const presence = useRoomPresence(roomCode, 'teacher')
-
-  if (dashboard.isLoading) {
-    return (
-      <main className="grid min-h-screen place-items-center bg-slate-950 text-slate-300">
-        <LoaderCircle className="animate-spin text-sky-400 size-8" />
-        <span className="sr-only">Loading Teacher Dashboard</span>
-      </main>
-    )
+  const currentRoom = dashboard.data?.currentRoom || {
+    id: 'room-default',
+    title: 'CS 401: Systems Programming',
+    subject: 'Computer Science',
+    roomCode: 'LAB401',
+    status: 'idle',
+    startsAt: 'Live',
+    joinedStudents: 0,
   }
 
-  const { currentRoom, todaySessions } = dashboard.data || {
-    currentRoom: { id: 'r1', roomCode: 'LAB401', title: 'CS 401: Advanced Systems Programming', subject: 'Computer Science', startsAt: '10:00 AM' },
-    recentRooms: [],
-    todaySessions: [],
-  }
-
+  const presence = useRoomPresence(currentRoom.roomCode, 'teacher')
   const liveStudents = presence.participants.filter((p) => p.role === 'student')
 
   const copyRoomCode = async () => {
     await navigator.clipboard.writeText(currentRoom.roomCode)
     setCopied(true)
-    toast.success('Room Code Copied!', currentRoom.roomCode)
+    toast.success('Room Code Copied', currentRoom.roomCode)
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const startClass = () => {
-    toast.success('Launching Live Classroom', `Opening room ${currentRoom.roomCode}`)
+  const handleStartSession = () => {
+    toast.success('Starting Session', `Opening classroom ${currentRoom.roomCode}`)
     navigate(`/room/${currentRoom.roomCode}`)
   }
 
-  const handleSendInvite = (e: React.FormEvent) => {
+  const handleCreateRoom = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!inviteEmail.trim()) return
-    toast.success('Invitation Sent', `Sent room code ${currentRoom.roomCode} to ${inviteEmail}`)
-    setInviteEmail('')
-    setShowInviteModal(false)
+    if (!newTitle.trim()) return
+    const generatedCode = 'LAB' + Math.floor(100 + Math.random() * 900)
+    toast.success('Room Created', `Room ${generatedCode} is ready for students.`)
+    setShowCreateModal(false)
+    setNewTitle('')
+    setNewSubject('')
+    navigate(`/room/${generatedCode}`)
   }
 
-  const teacherName = user?.displayName || user?.email?.split('@')[0] || 'Professor'
-  const teacherInitials = teacherName.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()
+  const teacherName = user?.displayName || user?.email?.split('@')[0] || 'Teacher'
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 font-sans">
-      {/* Top Navbar */}
-      <header className="border-b border-white/10 bg-slate-900/80 backdrop-blur-xl sticky top-0 z-30">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8 lg:px-10">
-          <BrandMark />
-          <div className="flex items-center gap-4">
-            <div className="hidden text-right sm:block">
-              <p className="text-sm font-semibold text-white">{teacherName}</p>
-              <p className="text-xs text-sky-400">Senior Faculty • Computer Science</p>
-            </div>
-            <span className="grid size-10 place-items-center rounded-full bg-sky-500/20 border border-sky-500/30 text-sm font-bold text-sky-300">
-              {teacherInitials}
-            </span>
+    <div className="flex h-screen w-full bg-zinc-950 text-zinc-100 font-sans overflow-hidden">
+      {/* Sidebar */}
+      <aside className="w-56 border-r border-zinc-800/80 bg-zinc-950 flex flex-col justify-between p-3 select-none shrink-0">
+        <div className="space-y-4">
+          <div className="px-2 py-1">
+            <BrandMark />
           </div>
-        </div>
-      </header>
 
-      {/* Main Content Area */}
-      <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:px-10 space-y-8">
-        {/* Header Kicker & Create Room CTA */}
-        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wider text-sky-400">Faculty Dashboard</p>
-            <h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              Good morning, {teacherName.split(' ')[0]}.
-            </h1>
-            <p className="mt-2 text-sm text-slate-400">Here is your live classroom status and student activity.</p>
+          <nav className="space-y-1">
+            <Link
+              to="/teacher/dashboard"
+              className="flex items-center gap-2.5 rounded-[10px] bg-zinc-900 px-3 py-2 text-xs font-medium text-zinc-100"
+            >
+              <LayoutDashboard size={15} className="text-blue-400" />
+              Dashboard
+            </Link>
+            <button
+              type="button"
+              onClick={handleStartSession}
+              className="w-full flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-xs font-medium text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200 transition-colors text-left"
+            >
+              <Radio size={15} className="text-emerald-400" />
+              Active Session
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(true)}
+              className="w-full flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-xs font-medium text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200 transition-colors text-left"
+            >
+              <Plus size={15} className="text-purple-400" />
+              Create Room
+            </button>
+          </nav>
+        </div>
+
+        <div className="border-t border-zinc-800/80 pt-3 space-y-1">
+          <div className="px-3 py-1.5 flex items-center gap-2">
+            <div className="flex size-7 items-center justify-center rounded-[6px] bg-zinc-800 text-xs font-mono text-zinc-200">
+              {teacherName.slice(0, 2).toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-medium text-zinc-200">{teacherName}</p>
+              <p className="truncate text-[10px] text-zinc-500">Teacher Account</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => signOut()}
+            className="w-full flex items-center gap-2 rounded-[10px] px-3 py-1.5 text-xs text-zinc-400 hover:bg-zinc-900 hover:text-rose-400 transition-colors"
+          >
+            <LogOut size={14} /> Log out
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Workspace Area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Top Navbar */}
+        <header className="h-13 border-b border-zinc-800/80 bg-zinc-950 px-6 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2 text-xs text-zinc-400">
+            <span className="text-zinc-200 font-medium">Dashboard</span>
+            <span>/</span>
+            <span className="font-mono text-zinc-400">Overview</span>
           </div>
 
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setShowInviteModal(true)}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm font-bold text-sky-300 hover:bg-sky-500/20 transition-all"
+              onClick={() => setShowCreateModal(true)}
+              className="h-8 px-3 rounded-[8px] bg-zinc-100 text-zinc-950 font-medium text-xs hover:bg-white transition-colors flex items-center gap-1.5"
             >
-              <UserPlus className="size-4" /> Invite Students
+              <Plus size={14} /> New Room
             </button>
-            <Link
-              to="/rooms/create"
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-sky-500 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-sky-400 transition-all shadow-lg hover:scale-105"
-            >
-              <Plus className="size-4" /> Create Room
-            </Link>
           </div>
-        </div>
+        </header>
 
-        {/* Analytics Quick Stats Row */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-3xl border border-white/10 bg-slate-900/60 p-5 shadow-xl backdrop-blur-xl">
-            <p className="text-xs font-semibold uppercase text-slate-400">Total Students</p>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className="font-display text-3xl font-bold text-white">48</span>
-              <span className="text-xs font-semibold text-emerald-400">Enrolled</span>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-white/10 bg-slate-900/60 p-5 shadow-xl backdrop-blur-xl">
-            <p className="text-xs font-semibold uppercase text-slate-400">Live Active Students</p>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className="font-display text-3xl font-bold text-sky-400">{liveStudents.length}</span>
-              <span className="text-xs font-semibold text-sky-300">Connected Now</span>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-white/10 bg-slate-900/60 p-5 shadow-xl backdrop-blur-xl">
-            <p className="text-xs font-semibold uppercase text-slate-400">Avg Attendance</p>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className="font-display text-3xl font-bold text-white">96%</span>
-              <span className="text-xs font-semibold text-emerald-400">High</span>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-white/10 bg-slate-900/60 p-5 shadow-xl backdrop-blur-xl">
-            <p className="text-xs font-semibold uppercase text-slate-400">Active Room Code</p>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className="font-mono text-2xl font-bold text-sky-300">{currentRoom.roomCode}</span>
-              <button
-                type="button"
-                onClick={copyRoomCode}
-                className="text-xs text-sky-400 hover:text-white font-semibold flex items-center gap-1"
-              >
-                {copied ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
-                {copied ? 'Copied' : 'Copy'}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Live Room Hero Card */}
-        <div className="relative overflow-hidden rounded-3xl border border-sky-500/30 bg-gradient-to-br from-sky-500/10 via-indigo-950/40 to-slate-900 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
-          <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
+        {/* Content Body (Single screen fit) */}
+        <main className="flex-1 p-6 overflow-y-auto space-y-6">
+          {/* Header Row */}
+          <div className="flex items-center justify-between">
             <div>
-              <div className="flex items-center gap-3">
-                <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-3 py-1 text-xs font-bold text-emerald-400 animate-pulse">
-                  READY TO START
-                </span>
-                <span className="text-xs text-slate-400">Room Code: <strong className="font-mono text-sky-300">{currentRoom.roomCode}</strong></span>
-              </div>
-              <h2 className="mt-3 font-display text-2xl font-bold text-white sm:text-3xl">{currentRoom.title}</h2>
-              <p className="mt-1 text-sm text-slate-400">{currentRoom.subject} • Scheduled for {currentRoom.startsAt}</p>
-              <p className="mt-4 text-xs font-semibold text-slate-300 flex items-center gap-2">
-                <Users className="size-4 text-sky-400" /> {liveStudents.length} students currently in waiting lobby
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={copyRoomCode}
-                className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-slate-900/80 px-4 py-3 text-xs font-semibold text-slate-200 hover:border-sky-400 transition-all"
-              >
-                {copied ? <Check className="size-4 text-emerald-400" /> : <Copy className="size-4" />}
-                {copied ? 'Code Copied' : 'Copy Code'}
-              </button>
-
-              <button
-                type="button"
-                onClick={startClass}
-                className="inline-flex items-center gap-2 rounded-2xl bg-sky-500 px-6 py-3 text-sm font-bold text-slate-950 hover:bg-sky-400 transition-all shadow-lg hover:scale-105"
-              >
-                <Play className="size-4" fill="currentColor" /> Start Live Class
-              </button>
+              <h1 className="text-xl font-semibold tracking-tight text-zinc-100">Teacher Dashboard</h1>
+              <p className="text-xs text-zinc-400 mt-0.5">Manage live classroom streams and active student presence.</p>
             </div>
           </div>
-        </div>
 
-        {/* Sessions & Live Participants Split */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Today's Sessions */}
-          <div className="rounded-3xl border border-white/10 bg-slate-900/60 p-6 shadow-xl backdrop-blur-xl">
-            <div className="flex items-center justify-between border-b border-white/10 pb-4">
-              <h3 className="font-display text-lg font-bold text-white flex items-center gap-2">
-                <CalendarDays className="size-5 text-sky-400" /> Today's Classes
-              </h3>
-              <span className="text-xs text-slate-400">{todaySessions.length} sessions</span>
-            </div>
-
-            <div className="mt-4 space-y-3">
-              {todaySessions.map((session) => (
-                <div
-                  key={session.id}
-                  className="flex items-center justify-between rounded-2xl border border-white/10 bg-slate-950/60 p-4"
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-white">{session.title}</p>
-                    <p className="mt-1 text-xs text-slate-400">
-                      {session.subject} • {session.time}
-                    </p>
-                  </div>
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                      session.status === 'completed'
-                        ? 'bg-slate-800 text-slate-400'
-                        : 'bg-sky-500/15 border border-sky-500/30 text-sky-300'
-                    }`}
-                  >
-                    {session.status === 'completed' ? 'Completed' : `${session.joinedStudents} registered`}
+          {/* Grid Layout */}
+          <div className="grid gap-5 md:grid-cols-3">
+            {/* Widget 1: Current Active Room */}
+            <div className="md:col-span-2 rounded-[10px] border border-zinc-800 bg-zinc-900/60 p-5 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-400">
+                    <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Active Room
                   </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-zinc-400">Room Code:</span>
+                    <span className="font-mono text-xs font-semibold text-zinc-100 bg-zinc-950 border border-zinc-800 px-2 py-0.5 rounded-[6px]">
+                      {currentRoom.roomCode}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={copyRoomCode}
+                      className="p-1 text-zinc-400 hover:text-zinc-100 transition-colors"
+                      title="Copy Code"
+                    >
+                      {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                    </button>
+                  </div>
                 </div>
-              ))}
+
+                <h2 className="text-base font-semibold text-zinc-100">{currentRoom.title}</h2>
+                <p className="text-xs text-zinc-400 mt-1">{currentRoom.subject} • Ready for broadcast</p>
+              </div>
+
+              <div className="mt-6 flex items-center justify-between border-t border-zinc-800/80 pt-4">
+                <div className="flex items-center gap-2 text-xs text-zinc-400">
+                  <Users size={14} className="text-blue-400" />
+                  <span><strong>{liveStudents.length}</strong> students connected</span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleStartSession}
+                  className="h-9 px-4 rounded-[8px] bg-zinc-100 text-zinc-950 font-medium text-xs hover:bg-white transition-colors flex items-center gap-2"
+                >
+                  <Cast size={14} /> Start Session
+                </button>
+              </div>
+            </div>
+
+            {/* Widget 2: Create Room Quick Card */}
+            <div className="rounded-[10px] border border-zinc-800 bg-zinc-900/60 p-5 flex flex-col justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
+                  <Plus size={15} className="text-purple-400" /> Quick Create Room
+                </h3>
+                <p className="text-xs text-zinc-400 mt-1">Generate a code to broadcast immediately.</p>
+
+                <form onSubmit={handleCreateRoom} className="mt-4 space-y-3">
+                  <input
+                    type="text"
+                    required
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    placeholder="Course Title (e.g. CS101)"
+                    className="w-full h-9 rounded-[8px] border border-zinc-800 bg-zinc-950 px-3 text-xs text-zinc-100 placeholder-zinc-500 focus:border-blue-500 focus:outline-none"
+                  />
+                  <input
+                    type="text"
+                    value={newSubject}
+                    onChange={(e) => setNewSubject(e.target.value)}
+                    placeholder="Subject (e.g. Computer Science)"
+                    className="w-full h-9 rounded-[8px] border border-zinc-800 bg-zinc-950 px-3 text-xs text-zinc-100 placeholder-zinc-500 focus:border-blue-500 focus:outline-none"
+                  />
+                  <button
+                    type="submit"
+                    className="w-full h-9 rounded-[8px] border border-zinc-800 bg-zinc-800 text-zinc-100 text-xs font-medium hover:bg-zinc-700 transition-colors"
+                  >
+                    Create & Start
+                  </button>
+                </form>
+              </div>
             </div>
           </div>
 
-          {/* Live Participants List */}
-          <div className="rounded-3xl border border-white/10 bg-slate-900/60 p-6 shadow-xl backdrop-blur-xl">
-            <div className="flex items-center justify-between border-b border-white/10 pb-4">
-              <h3 className="font-display text-lg font-bold text-white flex items-center gap-2">
-                <Users className="size-5 text-sky-400" /> Live Lobby Participants
-              </h3>
-              <span className="text-xs text-slate-400">{liveStudents.length} connected</span>
-            </div>
+          {/* Bottom Grid: Live Students & Recent Rooms */}
+          <div className="grid gap-5 md:grid-cols-2">
+            {/* Widget 3: Students Online */}
+            <div className="rounded-[10px] border border-zinc-800 bg-zinc-900/60 p-5">
+              <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3 mb-3">
+                <h3 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
+                  <Users size={15} className="text-blue-400" /> Students Online
+                </h3>
+                <span className="text-xs text-zinc-400">{liveStudents.length} in room</span>
+              </div>
 
-            <div className="mt-4 space-y-3">
               {liveStudents.length > 0 ? (
-                liveStudents.map((student) => (
-                  <div
-                    key={student.userId}
-                    className="flex items-center justify-between rounded-2xl border border-white/10 bg-slate-950/60 p-3.5"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="grid size-9 place-items-center rounded-full bg-purple-500/20 text-xs font-bold text-purple-300">
-                        {student.displayName.slice(0, 2).toUpperCase()}
-                      </span>
-                      <div>
-                        <p className="text-xs font-semibold text-white">{student.displayName}</p>
-                        <p className="text-[10px] text-emerald-400 font-medium">Joined & Checked In</p>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  {liveStudents.map((student) => (
+                    <div
+                      key={student.userId}
+                      className="flex items-center justify-between rounded-[8px] border border-zinc-800/80 bg-zinc-950/60 px-3 py-2 text-xs"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex size-6 items-center justify-center rounded-full bg-zinc-800 text-[10px] font-medium text-zinc-300">
+                          {student.displayName.slice(0, 2).toUpperCase()}
+                        </span>
+                        <span className="font-medium text-zinc-200">{student.displayName}</span>
                       </div>
+                      <span className="flex size-2 rounded-full bg-emerald-400" />
                     </div>
-                    <span className="size-2 rounded-full bg-emerald-400 animate-ping" />
-                  </div>
-                ))
+                  ))}
+                </div>
               ) : (
-                <div className="text-center py-8 text-xs text-slate-400">
-                  No students are connected to room {currentRoom.roomCode} right now.
-                  <p className="mt-1 text-slate-500">Share your room code to invite students!</p>
+                <div className="py-8 text-center text-xs text-zinc-500">
+                  No students are connected to room <strong className="font-mono text-zinc-300">{currentRoom.roomCode}</strong>.
+                  <p className="mt-1 text-zinc-600">Students join at /join using this code.</p>
                 </div>
               )}
             </div>
+
+            {/* Widget 4: Recent Rooms & History */}
+            <div className="rounded-[10px] border border-zinc-800 bg-zinc-900/60 p-5">
+              <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3 mb-3">
+                <h3 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
+                  <Clock size={15} className="text-purple-400" /> Recent Rooms
+                </h3>
+                <span className="text-xs text-zinc-400">History</span>
+              </div>
+
+              <div className="space-y-2">
+                {[
+                  { title: 'CS 401 Systems Lab', code: 'LAB401', date: 'Today' },
+                  { title: 'Web Development Lab', code: 'WEB202', date: 'Yesterday' },
+                  { title: 'Data Structures Practicum', code: 'DS301', date: '3 days ago' },
+                ].map((room) => (
+                  <div
+                    key={room.code}
+                    className="flex items-center justify-between rounded-[8px] border border-zinc-800/80 bg-zinc-950/60 px-3 py-2 text-xs"
+                  >
+                    <div>
+                      <p className="font-medium text-zinc-200">{room.title}</p>
+                      <span className="font-mono text-[10px] text-zinc-500">{room.code}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/room/${room.code}`)}
+                      className="text-xs text-blue-400 hover:text-blue-300 font-medium"
+                    >
+                      Open
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
+        </main>
       </div>
 
-      {/* Invite Students Modal */}
-      {showInviteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className="w-full max-w-md rounded-3xl border border-white/15 bg-slate-900 p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <h3 className="font-display text-lg font-bold text-white flex items-center gap-2">
-                <UserPlus className="size-5 text-sky-400" /> Invite Students
-              </h3>
+      {/* Create Room Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-xs">
+          <div className="w-full max-w-sm rounded-[10px] border border-zinc-800 bg-zinc-900 p-5 shadow-lg space-y-4">
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+              <h3 className="text-sm font-semibold text-zinc-100">Create New Room</h3>
               <button
                 type="button"
-                onClick={() => setShowInviteModal(false)}
-                className="text-slate-400 hover:text-white"
+                onClick={() => setShowCreateModal(false)}
+                className="text-zinc-400 hover:text-zinc-100"
               >
-                <X className="size-5" />
+                <X size={16} />
               </button>
             </div>
 
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Send an email invitation containing room code <strong className="text-sky-300 font-mono">{currentRoom.roomCode}</strong> directly to your student.
-            </p>
-
-            <form onSubmit={handleSendInvite} className="space-y-4">
+            <form onSubmit={handleCreateRoom} className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Student Email Address</label>
+                <label className="block text-xs font-medium text-zinc-300 mb-1">Class Title</label>
                 <input
-                  type="email"
+                  type="text"
                   required
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="student@university.edu"
-                  className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-400"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  placeholder="e.g. Advanced Operating Systems"
+                  className="w-full h-9 rounded-[8px] border border-zinc-800 bg-zinc-950 px-3 text-xs text-zinc-100 placeholder-zinc-500 focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-zinc-300 mb-1">Subject</label>
+                <input
+                  type="text"
+                  value={newSubject}
+                  onChange={(e) => setNewSubject(e.target.value)}
+                  placeholder="e.g. Computer Science"
+                  className="w-full h-9 rounded-[8px] border border-zinc-800 bg-zinc-950 px-3 text-xs text-zinc-100 placeholder-zinc-500 focus:border-blue-500 focus:outline-none"
                 />
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowInviteModal(false)}
-                  className="rounded-xl border border-white/10 px-4 py-2 text-xs text-slate-300 hover:bg-white/5"
+                  onClick={() => setShowCreateModal(false)}
+                  className="h-8 px-3 rounded-[8px] border border-zinc-800 text-xs text-zinc-400 hover:text-zinc-200"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-sky-500 px-5 py-2 text-xs font-bold text-slate-950 hover:bg-sky-400 transition-all shadow-md"
+                  className="h-8 px-4 rounded-[8px] bg-zinc-100 text-zinc-950 font-medium text-xs hover:bg-white"
                 >
-                  Send Invite
+                  Create & Launch
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-    </main>
+    </div>
   )
 }

@@ -1,19 +1,85 @@
 import { useState, type FormEvent } from 'react'
-import { useMutation } from '@tanstack/react-query'
-import { CheckCircle2 } from 'lucide-react'
-import { useAuth } from '../../auth/auth.context'
-import { AuthError } from '../../auth/components/AuthError'
-import { SubmitButton } from '../../auth/components/SubmitButton'
-import { toRoomErrorMessage } from '../room.errors'
-import { roomService } from '../room.service'
-import { RoomLayout } from '../components/RoomLayout'
-import { useRoomPresence } from '../../presence/useRoomPresence'
+import { ArrowRight } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { BrandMark } from '../../../components/BrandMark'
 
 export function JoinRoomPage() {
-  const { user } = useAuth(); const [roomCode, setRoomCode] = useState('')
-  const mutation = useMutation({ mutationFn: () => roomService.joinRoom(roomCode, user!.uid) })
-  const presence = useRoomPresence(mutation.data?.room.roomCode ?? null, 'student')
-  const submit = (event: FormEvent) => { event.preventDefault(); mutation.mutate() }
-  if (mutation.data) return <RoomLayout title={mutation.data.alreadyJoined ? 'Already joined' : 'You joined the room'} description="Your room membership is saved."><div className="mt-7 rounded-2xl border border-emerald-300/30 bg-emerald-300/10 p-5 text-center"><CheckCircle2 className="mx-auto text-emerald-200" size={34} /><p className="mt-4 font-display text-xl font-semibold text-cloud">{mutation.data.room.title}</p><p className="mt-1 text-sm text-mist">{mutation.data.room.subject}</p><span className="mt-4 inline-flex rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-cloud">{presence.status === 'joined' ? 'Connected to live room' : presence.status === 'error' ? 'Room presence unavailable' : 'Connecting to live room…'}</span>{presence.error && <p className="mt-3 text-sm text-red-100">{presence.error}</p>}<div className="mt-6"><a href={`/room/${mutation.data.room.roomCode}`} className="inline-flex items-center gap-2 rounded-xl bg-sky-aqua px-5 py-3 text-sm font-bold text-ink hover:bg-cyan-200">Enter Live Classroom →</a></div></div></RoomLayout>
-  return <RoomLayout title="Join a room" description="Enter the six-character code shared by your teacher."><form onSubmit={submit} className="mt-7"><label className="grid gap-2 text-sm text-fog">Room code<input required minLength={6} maxLength={6} autoCapitalize="characters" value={roomCode} onChange={(event) => setRoomCode(event.target.value.toUpperCase().replace(/[^A-Z2-9]/g, ''))} placeholder="ABC123" className="rounded-xl border border-white/15 bg-ink/50 px-3 py-3 font-display tracking-[0.22em] text-cloud uppercase outline-none placeholder:tracking-[0.22em] placeholder:text-mist/60 focus:border-sky-aqua" /></label><AuthError message={mutation.isError ? toRoomErrorMessage(mutation.error) : undefined} /><SubmitButton type="submit" isLoading={mutation.isPending}>Join room</SubmitButton></form></RoomLayout>
+  const navigate = useNavigate()
+  const [studentName, setStudentName] = useState('')
+  const [roomCode, setRoomCode] = useState('')
+
+  const handleJoin = (e: FormEvent) => {
+    e.preventDefault()
+    const trimmedName = studentName.trim()
+    const trimmedCode = roomCode.trim().toUpperCase()
+
+    if (!trimmedName || !trimmedCode) return
+
+    // Store guest student info in sessionStorage
+    sessionStorage.setItem('labcast_student_name', trimmedName)
+    sessionStorage.setItem('labcast_guest_id', `guest_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`)
+
+    navigate(`/room/${trimmedCode}`)
+  }
+
+  return (
+    <main className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-4 font-sans text-zinc-100">
+      <div className="w-full max-w-sm rounded-[10px] border border-zinc-800 bg-zinc-900/90 p-6 shadow-sm">
+        {/* Logo */}
+        <div className="flex justify-center mb-6">
+          <BrandMark />
+        </div>
+
+        <div className="text-center mb-6">
+          <h1 className="text-lg font-semibold tracking-tight text-zinc-100">Join a Classroom</h1>
+          <p className="text-xs text-zinc-400 mt-1">Enter your name and room code to watch live screen broadcasts.</p>
+        </div>
+
+        <form onSubmit={handleJoin} className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-zinc-300 mb-1.5">Your Name</label>
+            <input
+              type="text"
+              required
+              value={studentName}
+              onChange={(e) => setStudentName(e.target.value)}
+              placeholder="e.g. Alex Chen"
+              className="w-full h-10 rounded-[10px] border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-100 placeholder-zinc-500 focus:border-blue-500 focus:outline-none transition-colors"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-zinc-300 mb-1.5">Room Code</label>
+            <input
+              type="text"
+              required
+              minLength={4}
+              maxLength={8}
+              value={roomCode}
+              onChange={(e) => setRoomCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+              placeholder="LAB401"
+              className="w-full h-10 rounded-[10px] border border-zinc-800 bg-zinc-950 px-3 font-mono tracking-widest text-sm text-zinc-100 uppercase placeholder-zinc-600 focus:border-blue-500 focus:outline-none transition-colors"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={!studentName.trim() || roomCode.trim().length < 4}
+            className="w-full h-10 rounded-[10px] bg-zinc-100 text-zinc-950 font-medium text-sm hover:bg-white active:bg-zinc-200 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+          >
+            Join Classroom <ArrowRight size={15} />
+          </button>
+        </form>
+
+        <div className="mt-6 border-t border-zinc-800/80 pt-4 text-center">
+          <p className="text-[11px] text-zinc-500">
+            Teacher with an account?{' '}
+            <a href="/login" className="text-zinc-300 hover:text-white font-medium underline underline-offset-2">
+              Teacher Login
+            </a>
+          </p>
+        </div>
+      </div>
+    </main>
+  )
 }
